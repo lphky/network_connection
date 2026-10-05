@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Network Connection Lab｜網絡接駁實驗室</title>
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --panel:#ffffff;
+    --ink:#152238;
+    --muted:#667085;
+    --line:#d0d5dd;
+    --accent:#315ea8;
+    --accent-soft:#e9f0ff;
+    --ok:#16835f;
+    --ok-soft:#e7f7f1;
+    --warn:#b45309;
+    --warn-soft:#fff4e5;
+    --danger:#b42318;
+    --danger-soft:#feeceb;
+    --cable:#245a83;
+    --wifi:#7a4ca5;
+    --shadow:0 10px 24px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+  body{min-height:100vh}
+  button{font:inherit}
+  .app{max-width:1780px;margin:0 auto;padding:18px}
+  .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;margin-bottom:14px}
+  .eyebrow{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+  h1{font-size:clamp(24px,3vw,38px);line-height:1.15;margin:4px 0 8px}
+  .subtitle{color:var(--muted);font-size:15px;line-height:1.5}
+  .progressWrap{min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 4px 16px rgba(16,24,40,.04)}
+  .progressText{display:flex;justify-content:space-between;font-size:13px;font-weight:800;margin-bottom:8px}
+  .progressBar{height:8px;background:#eef1f6;border-radius:99px;overflow:hidden}
+  .progressFill{height:100%;width:33.333%;background:var(--accent);transition:width .25s ease}
+
+  .mission{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:14px}
+  .mission h2{margin:0 0 6px;font-size:20px}
+  .mission p{margin:0;color:var(--muted);line-height:1.55}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .badge{font-size:12px;font-weight:800;background:var(--accent-soft);color:#244b87;border:1px solid #cbd9f7;border-radius:999px;padding:7px 10px;white-space:nowrap}
+
+  .mainGrid{display:grid;grid-template-columns:235px minmax(0,1fr);gap:14px;align-items:stretch}
+  .tray{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+  .tray h3,.workspaceHead h3{margin:0;font-size:17px}
+  .trayHelp{font-size:13px;color:var(--muted);margin:6px 0 12px;line-height:1.45}
+  .trayList{display:grid;gap:10px}
+  .trayItem{border:1.5px dashed #aeb9ca;border-radius:14px;padding:10px;background:#fbfcfe;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;cursor:grab;touch-action:none;user-select:none;min-height:68px;transition:transform .15s ease,border-color .15s ease,background .15s ease}
+  .trayItem:hover{border-color:#7f95b3;background:#f5f8fc}
+  .trayItem:active{cursor:grabbing}
+  .trayItem.disabled{opacity:.38;cursor:not-allowed}
+  .trayIcon{font-size:28px;line-height:1;text-align:center}
+  .trayName{font-size:14px;font-weight:800;line-height:1.25}
+  .trayEn{font-size:12px;color:var(--muted);margin-top:2px}
+  .trayTag{font-size:11px;font-weight:800;border-radius:999px;background:#eef2f6;padding:5px 7px;color:#475467}
+
+  .workspacePanel{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .workspaceHead{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .workspaceStatus{font-size:13px;color:var(--muted);text-align:right}
+  .workspace{position:relative;min-height:680px;overflow:hidden;background:
+    linear-gradient(#eef2f7 1px,transparent 1px),
+    linear-gradient(90deg,#eef2f7 1px,transparent 1px),#fbfcfe;
+    background-size:28px 28px;
+    border-radius:0 0 16px 16px;
+    touch-action:pan-y;
+  }
+  .workspace.dragTarget{outline:3px solid rgba(49,94,168,.18);outline-offset:-3px}
+  .workspaceEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:#98a2b3;font-size:16px;pointer-events:none}
+  .workspaceEmpty strong{display:block;color:#667085;font-size:18px;margin-bottom:6px}
+  .connections{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:1;pointer-events:none}
+  .connectionLabels{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:3;pointer-events:none}
+  .deviceLayer{position:absolute;inset:0;z-index:2}
+
+  .device{position:absolute;width:186px;min-height:112px;border:1px solid rgba(16,24,40,.16);border-radius:16px;background:#fff;box-shadow:var(--shadow);user-select:none;touch-action:none;cursor:grab;transition:box-shadow .15s ease,transform .15s ease}
+  .device[data-kind="homeRouter"]{width:360px}
+  .device[data-kind="router"]{width:235px}
+  .device[data-kind="switch"]{width:470px}
+  .device[data-kind="ap"]{width:230px}
+  .device:active{cursor:grabbing}
+  .device.dragging{box-shadow:0 16px 36px rgba(16,24,40,.2);transform:scale(1.025);z-index:20}
+  .device.selectedDevice{outline:3px solid rgba(49,94,168,.28)}
+  .deviceTop{display:flex;align-items:flex-start;gap:9px;padding:12px 12px 8px}.removeDevice{margin-left:auto;width:30px;height:30px;border:0;border-radius:8px;background:#f2f4f7;color:#667085;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}.removeDevice:hover{background:#feeceb;color:#b42318}
+  .deviceIcon{font-size:30px;line-height:1}
+  .deviceLabels{min-width:0;flex:1}
+  .deviceName{font-size:14px;font-weight:900;line-height:1.25}
+  .deviceEn{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deviceMeta{font-size:11px;color:var(--muted);padding:0 12px 8px}
+  .ports{padding:0 10px 11px;display:flex;flex-wrap:nowrap;gap:6px;align-items:center;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+  .ports::-webkit-scrollbar{height:6px}
+  .device[data-kind="switch"] .ports{flex-wrap:wrap;overflow:visible;row-gap:8px}
+  .port{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;padding:5px 8px;min-width:46px;border-radius:9px;border:1px solid #9aa8bb;background:#f9fafb;font-size:10px;font-weight:900;cursor:crosshair;touch-action:none;user-select:none;white-space:nowrap;transition:transform .12s ease,box-shadow .12s ease,background .12s ease,border-color .12s ease}
+  .port::before{content:"";width:10px;height:10px;border:2px solid currentColor;border-radius:3px;background:white;flex:0 0 auto}
+  .port[data-type="wifi"]{border-style:dashed;color:#6d3e90;background:#faf6ff}
+  .port[data-type="wifi"]::before{border-radius:50%;border-width:2px}
+  .port.busy:not([data-type="wifi"]){cursor:pointer}
+  .port.connected{background:#ecfdf3;border-color:#67b889;color:#155a3a}
+  .port.snap{transform:scale(1.12);box-shadow:0 0 0 4px rgba(49,94,168,.14);border-color:var(--accent);background:#eef4ff}
+  .portLabelSmall{font-size:9px;font-weight:900}
+  .device[data-kind="broadband"]{border-top:5px solid #d69e00}
+  .device[data-kind="homeRouter"]{border-top:5px solid #3768bd}
+  .device[data-kind="router"]{border-top:5px solid #b263b8}
+  .device[data-kind="switch"]{border-top:5px solid #75b35a}
+  .device[data-kind="ap"]{border-top:5px solid #47a7d8}
+  .device[data-kind="desktop"]{border-top:5px solid #667085}
+  .device[data-kind="laptop"]{border-top:5px solid #ef7b2d}
+  .device[data-kind="tablet"]{border-top:5px solid #69a83a}
+  .portStat{font-size:11px;font-weight:900;color:#475467}
+
+  .connHit{fill:none;stroke:transparent;stroke-width:20;pointer-events:stroke;cursor:pointer}
+  .connPath{fill:none;stroke:var(--cable);stroke-width:4.5;stroke-linecap:round;pointer-events:none}
+  .connPath.wifi{stroke:var(--wifi);stroke-dasharray:9 8;stroke-width:4.5}
+  .connEndpoint{pointer-events:none;stroke:#fff;stroke-width:2;fill:var(--cable)}
+  .connEndpoint.wifi{fill:var(--wifi)}
+  .connLabelBg{fill:#ffffff;stroke:#98a2b3;stroke-width:1;opacity:.98;filter:drop-shadow(0 1px 1px rgba(16,24,40,.08))}
+  .connLabelText{font-size:11px;font-weight:900;fill:#243b5a;dominant-baseline:middle;text-anchor:middle;pointer-events:none}
+  .connPath.selected{stroke:#d92d20;stroke-width:5}
+  .tempPath{fill:none;stroke:var(--accent);stroke-width:4.5;stroke-linecap:round;stroke-dasharray:8 7;pointer-events:none;opacity:.85}
+  .connPath.flowing{stroke-dasharray:10 8;animation:flow 1s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-36}}
+
+  .toolbar{margin-top:14px;display:flex;flex-wrap:wrap;gap:9px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .btn{min-height:44px;border:1px solid #b8c1cf;background:#fff;color:var(--ink);border-radius:11px;padding:9px 13px;font-weight:850;cursor:pointer;transition:background .15s ease,transform .12s ease,border-color .15s ease}
+  .btn:hover{background:#f8fafc}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.success{background:var(--ok);color:white;border-color:var(--ok)}
+  .btn.danger{color:var(--danger);border-color:#efb9b4}
+  .btn:disabled{opacity:.42;cursor:not-allowed}
+  .toolbarSpacer{flex:1}
+  .modePill{font-size:12px;color:#475467;background:#f2f4f7;border-radius:999px;padding:7px 10px;font-weight:800}
+
+  .feedback{margin-top:14px;border-radius:16px;border:1px solid var(--line);background:var(--panel);padding:14px 16px;min-height:74px}
+  .feedbackTitle{font-weight:900;margin-bottom:5px}
+  .feedbackBody{color:var(--muted);line-height:1.55;font-size:14px}
+  .feedback.ok{border-color:#9bd7c4;background:var(--ok-soft)}
+  .feedback.warn{border-color:#f2c48f;background:var(--warn-soft)}
+  .feedback.err{border-color:#f1b4ae;background:var(--danger-soft)}
+  .resultActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .ghost{position:fixed;z-index:9999;pointer-events:none;width:180px;border-radius:14px;background:#fff;border:1px solid #9db0c9;box-shadow:0 18px 40px rgba(16,24,40,.22);padding:10px;display:flex;align-items:center;gap:10px;transform:translate(-50%,-50%);opacity:.95}
+  .ghost .gIcon{font-size:28px}
+  .ghost .gName{font-size:13px;font-weight:900}
+
+  @media (max-width:1000px){
+    .mainGrid{grid-template-columns:1fr}
+    .trayList{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .tray{order:1}
+    .workspacePanel{order:2}
+    .workspace{min-height:620px}
+  }
+  @media (max-width:720px){
+    .app{padding:10px}
+    .topbar{grid-template-columns:1fr}
+    .progressWrap{min-width:0}
+    .mission{grid-template-columns:1fr}
+    .badges{justify-content:flex-start}
+    .trayList{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .workspace{min-height:560px}
+    .device{width:160px;min-height:105px}
+    .device[data-kind="homeRouter"]{width:290px}
+    .device[data-kind="router"]{width:220px}
+    .device[data-kind="switch"]{width:360px}
+    .device[data-kind="ap"]{width:210px}
+    .deviceName{font-size:13px}
+    .deviceEn{font-size:10px}
+  }
+  @media (max-width:460px){
+    .trayList{grid-template-columns:1fr}
+    .toolbar{align-items:stretch}
+    .toolbarSpacer{display:none}
+    .btn{flex:1 1 46%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="topbar">
+    <div>
+      <div class="eyebrow">Interactive ICT Learning</div>
+      <h1>Network Connection Lab｜網絡接駁實驗室</h1>
+      <div class="subtitle">拖拉器材、親手接線，再檢查你的網絡拓撲。支援滑鼠、觸控及手寫筆。</div>
+    </div>
+    <div class="progressWrap" aria-label="學習進度">
+      <div class="progressText"><span id="progressLabel">任務 1 / 3</span><span id="progressPercent">33%</span></div>
+      <div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
+    </div>
+  </div>
+
+  <section class="mission">
+    <div>
+      <h2 id="missionTitle">任務載入中…</h2>
+      <p id="missionText"></p>
+    </div>
+    <div class="badges" id="missionBadges"></div>
+  </section>
+
+  <div class="mainGrid">
+    <aside class="tray">
+      <h3>器材區 Equipment Tray</h3>
+      <div class="trayHelp">把需要的器材拖到右邊工作區。輕按器材亦可加入，方便觸控或無障礙操作。</div>
+      <div class="trayList" id="trayList"></div>
+    </aside>
+
+    <section class="workspacePanel">
+      <div class="workspaceHead">
+        <div>
+          <h3>Network Workspace</h3>
+          <div class="trayHelp" style="margin:4px 0 0">拖動器材重新排列；由 Port 拖到另一個相同類型的 Port 建立連線。點一下已連接的 Port 可選取／取消該連線；每條線會在兩端線尾附近顯示對應的 Port 名稱。</div>
+        </div>
+        <div class="workspaceStatus" id="workspaceStatus">0 件器材｜0 條連線</div>
+      </div>
+      <div class="workspace" id="workspace" aria-label="網絡工作區">
+        <div class="workspaceEmpty" id="workspaceEmpty"><div><strong>把器材拖到這裏開始</strong>先放置器材，再從 Port 拖拉建立連線。</div></div>
+        <svg class="connections" id="connectionsSvg" aria-hidden="true"></svg>
+        <svg class="connectionLabels" id="labelsSvg" aria-hidden="true"></svg>
+        <div class="deviceLayer" id="deviceLayer"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn" id="undoBtn" type="button">↶ Undo 復原</button>
+    <button class="btn" id="arrangeBtn" type="button">▦ 整理版面</button>
+    <button class="btn" id="hintBtn" type="button">💡 提示 Hint</button>
+    <button class="btn danger" id="deleteConnBtn" type="button" disabled>🗑 刪除選取連線</button>
+    <button class="btn" id="resetBtn" type="button">↺ 重新開始</button>
+    <span class="toolbarSpacer"></span>
+    <span class="modePill" id="selectedConnLabel">未選取連線</span>
+    <button class="btn primary" id="checkBtn" type="button">✓ 檢查網絡</button>
+  </div>
+
+  <div class="feedback" id="feedback" aria-live="polite">
+    <div class="feedbackTitle">開始吧！</div>
+    <div class="feedbackBody">先把器材拖入工作區。需要接線時，由一個 Port 按住並拖到另一個 Port。若接錯了，可點一下已連接的 Port 選取連線，再按刪除，或再點同一個 Port 直接取消。每條線會在兩端線尾附近標示正連接的 Port。</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const DEVICE_TYPES = {
+    broadband: { zh:'寬頻', en:'Broadband', icon:'🌐', meta:'互聯網連線', ports:[{id:'eth',label:'ETH',type:'ethernet',role:'broadband'}] },
+    homeRouter: { zh:'家用無線路由器', en:'Home Wireless Router', icon:'📡', meta:'WAN + 4 LAN + Wi-Fi', ports:[
+      {id:'wifi',label:'Wi-Fi',type:'wifi',role:'wifi',multi:true},
+      {id:'wan',label:'WAN',type:'ethernet',role:'wan'},
+      {id:'lan1',label:'LAN 1',type:'ethernet',role:'lan'},
+      {id:'lan2',label:'LAN 2',type:'ethernet',role:'lan'},
+      {id:'lan3',label:'LAN 3',type:'ethernet',role:'lan'},
+      {id:'lan4',label:'LAN 4',type:'ethernet',role:'lan'}
+    ]},
+    router: { zh:'路由器', en:'Router', icon:'🛜', meta:'2 個 Ethernet Ports：WAN + LAN', ports:[
+      {id:'wan',label:'WAN',type:'ethernet',role:'wan'},
+      {id:'lan',label:'LAN',type:'ethernet',role:'lan'}
+    ]},
+    switch: { zh:'交換器', en:'8-Port Switch', icon:'🔀', meta:'8 個 Ethernet Ports', ports:Array.from({length:8},(_,i)=>({id:'p'+(i+1),label:String(i+1),type:'ethernet',role:'switch'})) },
+    ap: { zh:'無線網絡接達點', en:'Wireless Access Point', icon:'📶', meta:'Ethernet + Wi-Fi', ports:[
+      {id:'wifi',label:'Wi-Fi',type:'wifi',role:'wifi',multi:true},
+      {id:'eth',label:'ETH',type:'ethernet',role:'ap'}
+    ]},
+    desktop: { zh:'桌上電腦', en:'Desktop Computer', icon:'🖥️', meta:'有線裝置', ports:[{id:'eth',label:'ETH',type:'ethernet',role:'client'}] },
+    laptop: { zh:'手提電腦', en:'Laptop Computer', icon:'💻', meta:'無線裝置', ports:[{id:'wifi',label:'Wi-Fi',type:'wifi',role:'wifi'}] },
+    tablet: { zh:'平板電腦', en:'Tablet', icon:'▯', meta:'無線裝置', ports:[{id:'wifi',label:'Wi-Fi',type:'wifi',role:'wifi'}] }
+  };
+
+  const LEVELS = [
+    {
+      id:1,
+      title:'任務 1｜家居網絡 Home Network',
+      text:'為一個家庭建立網絡：2 部桌上電腦、1 部手提電腦及 5 部平板電腦都要連接到互聯網。',
+      badges:['重點：Router','有線 + Wi-Fi'],
+      tray:[
+        {id:'broadband1',type:'broadband'},
+        {id:'homeRouter1',type:'homeRouter'},
+        {id:'pc1',type:'desktop',label:'桌上電腦 1'},
+        {id:'pc2',type:'desktop',label:'桌上電腦 2'},
+        {id:'laptop1',type:'laptop'},
+        {id:'tabletGroup',type:'tablet',label:'平板電腦 ×5',meta:'5 部平板電腦'}
+      ],
+      required:[
+        req('broadband1','broadband','homeRouter1','wan','ethernet'),
+        req('homeRouter1','lan','pc1','client','ethernet'),
+        req('homeRouter1','lan','pc2','client','ethernet'),
+        req('homeRouter1','wifi','laptop1','wifi','wifi'),
+        req('homeRouter1','wifi','tabletGroup','wifi','wifi')
+      ],
+      hints:[
+        '先找出哪一件設備通常直接連接 Broadband。',
+        'Home Wireless Router 一邊用 WAN 接 Broadband；LAN Ports 可接桌上電腦，Wi-Fi 可接流動裝置。',
+        '建議拓撲：Broadband → Home Wireless Router；兩部 Desktop 接 LAN；Laptop 和 Tablet ×5 用 Wi-Fi。'
+      ],
+      success:'家居網絡建立完成！你已把 Router、Ethernet 與 Wi-Fi 的角色接駁正確。',
+      workspaceMin:680
+    },
+    {
+      id:2,
+      title:'任務 2｜辦公室網絡 Office Network',
+      text:'為辦公室建立網絡：4 部桌上電腦、1 部手提電腦及 50 部平板電腦都要接駁互聯網。',
+      badges:['Router：WAN + LAN','重點：Switch','重點：Wireless AP'],
+      tray:[
+        {id:'broadband1',type:'broadband'},
+        {id:'router1',type:'router'},
+        {id:'switch1',type:'switch'},
+        {id:'ap1',type:'ap'},
+        {id:'pc1',type:'desktop',label:'桌上電腦 1'},
+        {id:'pc2',type:'desktop',label:'桌上電腦 2'},
+        {id:'pc3',type:'desktop',label:'桌上電腦 3'},
+        {id:'pc4',type:'desktop',label:'桌上電腦 4'},
+        {id:'laptop1',type:'laptop'},
+        {id:'tabletGroup',type:'tablet',label:'平板電腦 ×50',meta:'50 部平板電腦'}
+      ],
+      required:[
+        req('broadband1','broadband','router1','wan','ethernet'),
+        req('router1','lan','switch1','switch','ethernet'),
+        req('switch1','switch','pc1','client','ethernet'),
+        req('switch1','switch','pc2','client','ethernet'),
+        req('switch1','switch','pc3','client','ethernet'),
+        req('switch1','switch','pc4','client','ethernet'),
+        req('switch1','switch','ap1','ap','ethernet'),
+        req('ap1','wifi','laptop1','wifi','wifi'),
+        req('ap1','wifi','tabletGroup','wifi','wifi')
+      ],
+      hints:[
+        '先把「互聯網 → Router → LAN」這條主幹想清楚。',
+        '這個 Router 只有兩個 Port：WAN 接 Broadband，LAN 接 Switch。多部桌上電腦及 Wireless AP 再接到 Switch。',
+        '建議拓撲：Broadband → Router → Switch；4 部 Desktop 與 Wireless AP 都接 Switch；Laptop / Tablet ×50 以 Wi-Fi 接 AP。'
+      ],
+      success:'辦公室網絡建立完成！你已正確運用 Router、Switch 和 Wireless Access Point。這個 Router 只有 WAN 和 LAN 兩個 Ethernet Ports：WAN 接 Broadband，LAN 接 Switch。',
+      workspaceMin:860
+    },
+    {
+      id:3,
+      title:'任務 3｜網絡擴充挑戰 Network Expansion',
+      text:'家居桌上電腦由 2 部增加至 5 部。家用無線路由器只有 4 個 LAN Ports，請加入合適設備並完成新接法。',
+      badges:['思考題','LAN Port 不足'],
+      tray:[
+        {id:'broadband1',type:'broadband'},
+        {id:'homeRouter1',type:'homeRouter'},
+        {id:'switch1',type:'switch'},
+        {id:'pc1',type:'desktop',label:'桌上電腦 1'},
+        {id:'pc2',type:'desktop',label:'桌上電腦 2'},
+        {id:'pc3',type:'desktop',label:'桌上電腦 3'},
+        {id:'pc4',type:'desktop',label:'桌上電腦 4'},
+        {id:'pc5',type:'desktop',label:'桌上電腦 5'},
+        {id:'laptop1',type:'laptop'},
+        {id:'tabletGroup',type:'tablet',label:'平板電腦 ×5',meta:'5 部平板電腦'}
+      ],
+      required:[
+        req('broadband1','broadband','homeRouter1','wan','ethernet'),
+        req('homeRouter1','lan','switch1','switch','ethernet'),
+        req('switch1','switch','pc1','client','ethernet'),
+        req('switch1','switch','pc2','client','ethernet'),
+        req('switch1','switch','pc3','client','ethernet'),
+        req('switch1','switch','pc4','client','ethernet'),
+        req('switch1','switch','pc5','client','ethernet'),
+        req('homeRouter1','wifi','laptop1','wifi','wifi'),
+        req('homeRouter1','wifi','tabletGroup','wifi','wifi')
+      ],
+      hints:[
+        '問題不是「需要另一個網絡」，而是「有線 LAN Ports 不夠」。',
+        'Switch 的作用之一，就是增加 LAN 內可連接的有線裝置數量。',
+        '把 Switch 接到 Home Wireless Router 的 LAN，再把 5 部 Desktop 接到 Switch。Laptop / Tablet 仍可直接用 Router 的 Wi-Fi。'
+      ],
+      success:'挑戰完成！當 Router 的 Ethernet Ports 不足時，可加入 Switch 擴充有線 LAN 連接。',
+      workspaceMin:860
+    }
+  ];
+
+  function req(a,aRole,b,bRole,type){return {a,aRole,b,bRole,type};}
+
+  const els = {
+    trayList:document.getElementById('trayList'), workspace:document.getElementById('workspace'), deviceLayer:document.getElementById('deviceLayer'),
+    svg:document.getElementById('connectionsSvg'), labelsSvg:document.getElementById('labelsSvg'), empty:document.getElementById('workspaceEmpty'), status:document.getElementById('workspaceStatus'),
+    title:document.getElementById('missionTitle'), text:document.getElementById('missionText'), badges:document.getElementById('missionBadges'),
+    feedback:document.getElementById('feedback'), undo:document.getElementById('undoBtn'), arrange:document.getElementById('arrangeBtn'), hint:document.getElementById('hintBtn'),
+    del:document.getElementById('deleteConnBtn'), reset:document.getElementById('resetBtn'), check:document.getElementById('checkBtn'), selectedLabel:document.getElementById('selectedConnLabel'),
+    progressLabel:document.getElementById('progressLabel'), progressPercent:document.getElementById('progressPercent'), progressFill:document.getElementById('progressFill')
+  };
+
+  let currentLevelIndex = 0;
+  let placed = {};
+  let connections = [];
+  let history = [];
+  let selectedConnectionId = null;
+  let hintIndex = 0;
+  let deviceDrag = null;
+  let trayDrag = null;
+  let cableDrag = null;
+  let connSeq = 1;
+  let ignoreNextTrayClick = false;
+
+  function currentLevel(){ return LEVELS[currentLevelIndex]; }
+  function deepClone(v){ return JSON.parse(JSON.stringify(v)); }
+  function saveHistory(){
+    history.push({placed:deepClone(placed),connections:deepClone(connections)});
+    if(history.length>40) history.shift();
+    updateButtons();
+  }
+  function restoreSnapshot(snap){
+    placed = deepClone(snap.placed);
+    connections = deepClone(snap.connections);
+    selectedConnectionId = null;
+    renderAll();
+  }
+
+  function setFeedback(kind,title,body,actions=''){
+    els.feedback.className = 'feedback' + (kind ? ' '+kind : '');
+    els.feedback.innerHTML = `<div class="feedbackTitle">${escapeHtml(title)}</div><div class="feedbackBody">${body}</div>${actions}`;
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderLevel(){
+    const level = currentLevel();
+    els.title.textContent = level.title;
+    els.text.textContent = level.text;
+    els.badges.innerHTML = level.badges.map(x=>`<span class="badge">${escapeHtml(x)}</span>`).join('');
+    els.workspace.style.minHeight = (level.workspaceMin || 680) + 'px';
+    const pct = Math.round((currentLevelIndex+1)/LEVELS.length*100);
+    els.progressLabel.textContent = `任務 ${currentLevelIndex+1} / ${LEVELS.length}`;
+    els.progressPercent.textContent = pct+'%';
+    els.progressFill.style.width = pct+'%';
+    renderTray();
+  }
+
+  function renderTray(){
+    els.trayList.innerHTML='';
+    for(const item of currentLevel().tray){
+      const def = DEVICE_TYPES[item.type];
+      const inUse = !!placed[item.id];
+      const div = document.createElement('div');
+      div.className = 'trayItem'+(inUse?' disabled':'');
+      div.dataset.id=item.id;
+      div.innerHTML = `<div class="trayIcon">${def.icon}</div><div><div class="trayName">${escapeHtml(item.label||def.zh)}</div><div class="trayEn">${escapeHtml(def.en)}</div></div><div class="trayTag">拖拉</div>`;
+      if(!inUse){
+        div.addEventListener('pointerdown', startTrayDrag);
+        div.addEventListener('click', () => {
+          if(ignoreNextTrayClick){ ignoreNextTrayClick=false; return; }
+          addDeviceFromTray(item.id);
+        });
+      }
+      els.trayList.appendChild(div);
+    }
+  }
+
+  function startTrayDrag(e){
+    if(e.button!==undefined && e.button!==0) return;
+    const id = e.currentTarget.dataset.id;
+    const item = currentLevel().tray.find(x=>x.id===id);
+    if(!item || placed[id]) return;
+    const def = DEVICE_TYPES[item.type];
+    const ghost = document.createElement('div');
+    ghost.className='ghost';
+    ghost.innerHTML=`<div class="gIcon">${def.icon}</div><div><div class="gName">${escapeHtml(item.label||def.zh)}</div><div class="trayEn">${escapeHtml(def.en)}</div></div>`;
+    document.body.appendChild(ghost);
+    ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px';
+    trayDrag={id,startX:e.clientX,startY:e.clientY,ghost,moved:false};
+    document.addEventListener('pointermove', moveTrayDrag,{passive:false});
+    document.addEventListener('pointerup', endTrayDrag,{once:true});
+    document.addEventListener('pointercancel', endTrayDrag,{once:true});
+  }
+  function moveTrayDrag(e){
+    if(!trayDrag) return;
+    const dx=e.clientX-trayDrag.startX, dy=e.clientY-trayDrag.startY;
+    if(Math.hypot(dx,dy)>6) trayDrag.moved=true;
+    trayDrag.ghost.style.left=e.clientX+'px'; trayDrag.ghost.style.top=e.clientY+'px';
+    const r=els.workspace.getBoundingClientRect();
+    const inside=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+    els.workspace.classList.toggle('dragTarget',inside);
+    e.preventDefault();
+  }
+  function endTrayDrag(e){
+    document.removeEventListener('pointermove', moveTrayDrag);
+    if(!trayDrag) return;
+    const wasMoved=trayDrag.moved;
+    const id=trayDrag.id;
+    const r=els.workspace.getBoundingClientRect();
+    const inside=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+    trayDrag.ghost.remove();
+    els.workspace.classList.remove('dragTarget');
+    if(wasMoved){
+      ignoreNextTrayClick=true;
+      setTimeout(()=>{ignoreNextTrayClick=false;},250);
+    }
+    trayDrag=null;
+    if(inside){ addDeviceFromTray(id,e.clientX-r.left-83,e.clientY-r.top-55); }
+  }
+
+  function addDeviceFromTray(id,x,y){
+    if(placed[id]) return;
+    const item=currentLevel().tray.find(v=>v.id===id);
+    if(!item) return;
+    saveHistory();
+    const r=els.workspace.getBoundingClientRect();
+    const count=Object.keys(placed).length;
+    const defaultX=18+(count%4)*190;
+    const defaultY=24+Math.floor(count/4)*155;
+    placed[id]={id,type:item.type,label:item.label||null,meta:item.meta||null,x:clamp(x??defaultX,8,Math.max(8,r.width-176)),y:clamp(y??defaultY,8,Math.max(8,r.height-125))};
+    renderAll();
+  }
+
+  function renderAll(){
+    renderLevel();
+    renderDevices();
+    renderConnections();
+    updateStatus();
+    updateButtons();
+  }
+
+  function renderDevices(){
+    els.deviceLayer.innerHTML='';
+    const ids=Object.keys(placed);
+    els.empty.style.display=ids.length?'none':'flex';
+    for(const id of ids){
+      const d=placed[id], def=DEVICE_TYPES[d.type];
+      const el=document.createElement('div');
+      el.className='device'; el.dataset.id=id; el.dataset.kind=d.type;
+      el.style.left=d.x+'px'; el.style.top=d.y+'px';
+      const meta=d.meta||def.meta;
+      let extra='';
+      if(d.type==='switch') extra=`<span class="portStat" data-port-stat="${id}">${usedEthernetCount(id)}/8 ports used</span>`;
+      el.innerHTML=`
+        <div class="deviceTop"><div class="deviceIcon">${def.icon}</div><div class="deviceLabels"><div class="deviceName">${escapeHtml(d.label||def.zh)}</div><div class="deviceEn">${escapeHtml(def.en)}</div></div><button type="button" class="removeDevice" data-remove-device="${id}" aria-label="移除 ${escapeHtml(d.label||def.zh)}">×</button></div>
+        <div class="deviceMeta">${escapeHtml(meta)} ${extra}</div>
+        <div class="ports">${def.ports.map(p=>portHtml(id,p)).join('')}</div>`;
+      el.addEventListener('pointerdown', startDeviceDrag);
+      els.deviceLayer.appendChild(el);
+    }
+    els.deviceLayer.querySelectorAll('.port').forEach(p=>p.addEventListener('pointerdown', startCableDrag));
+    els.deviceLayer.querySelectorAll('.removeDevice').forEach(btn=>{
+      btn.addEventListener('pointerdown',e=>e.stopPropagation());
+      btn.addEventListener('click',e=>{ e.stopPropagation(); removeDevice(btn.dataset.removeDevice); });
+    });
+  }
+
+  function portHtml(deviceId,p){
+    const connected = isPortBusy(deviceId,p.id);
+    const busy = p.type==='ethernet' && connected;
+    return `<div class="port ${busy?'busy':''} ${connected?'connected':''}" data-device="${deviceId}" data-port="${p.id}" data-type="${p.type}" data-role="${p.role}" data-multi="${p.multi?'1':'0'}"><span class="portLabelSmall">${escapeHtml(p.label)}</span></div>`;
+  }
+
+  function startDeviceDrag(e){
+    if(e.target.closest('.port') || e.target.closest('.removeDevice')) return;
+    if(e.button!==undefined && e.button!==0) return;
+    const el=e.currentTarget, id=el.dataset.id, d=placed[id];
+    const r=els.workspace.getBoundingClientRect();
+    saveHistory();
+    deviceDrag={id,el,startX:e.clientX,startY:e.clientY,origX:d.x,origY:d.y,moved:false,workspace:r};
+    el.classList.add('dragging');
+    el.setPointerCapture?.(e.pointerId);
+    document.addEventListener('pointermove', moveDeviceDrag,{passive:false});
+    document.addEventListener('pointerup', endDeviceDrag,{once:true});
+    document.addEventListener('pointercancel', endDeviceDrag,{once:true});
+  }
+  function moveDeviceDrag(e){
+    if(!deviceDrag) return;
+    const dx=e.clientX-deviceDrag.startX, dy=e.clientY-deviceDrag.startY;
+    if(Math.hypot(dx,dy)>5) deviceDrag.moved=true;
+    if(!deviceDrag.moved) return;
+    const wr=els.workspace.getBoundingClientRect();
+    const er=deviceDrag.el.getBoundingClientRect();
+    const maxX=Math.max(6,wr.width-er.width-6), maxY=Math.max(6,wr.height-er.height-6);
+    const nx=clamp(deviceDrag.origX+dx,6,maxX), ny=clamp(deviceDrag.origY+dy,6,maxY);
+    placed[deviceDrag.id].x=nx; placed[deviceDrag.id].y=ny;
+    deviceDrag.el.style.left=nx+'px'; deviceDrag.el.style.top=ny+'px';
+    renderConnections();
+    e.preventDefault();
+  }
+  function endDeviceDrag(){
+    document.removeEventListener('pointermove', moveDeviceDrag);
+    if(!deviceDrag) return;
+    deviceDrag.el.classList.remove('dragging');
+    if(!deviceDrag.moved){ history.pop(); updateButtons(); }
+    deviceDrag=null;
+  }
+
+  function startCableDrag(e){
+    e.stopPropagation();
+    if(e.button!==undefined && e.button!==0) return;
+    const port=e.currentTarget;
+    const deviceId=port.dataset.device, portId=port.dataset.port, type=port.dataset.type, multi=port.dataset.multi==='1';
+    const existingConn = findConnectionByPort(deviceId,portId);
+    if(existingConn && (type==='ethernet' || !multi)){
+      if(selectedConnectionId===existingConn.id){
+        deleteConnectionById(existingConn.id,true);
+      }else{
+        selectConnection(existingConn.id);
+        setFeedback('', '已選取連線', '這個 Port 已經接線。你可以按「刪除選取連線」，或再點同一個已連接 Port 直接取消這條連線。');
+      }
+      return;
+    }
+    const start=portCenter(port);
+    cableDrag={sourcePortEl:port,sourceDevice:deviceId,sourcePort:portId,type,start,current:{x:start.x,y:start.y}};
+    document.addEventListener('pointermove', moveCableDrag,{passive:false});
+    document.addEventListener('pointerup', endCableDrag,{once:true});
+    document.addEventListener('pointercancel', endCableDrag,{once:true});
+    renderConnections();
+  }
+  function moveCableDrag(e){
+    if(!cableDrag) return;
+    const wr=els.workspace.getBoundingClientRect();
+    cableDrag.current={x:e.clientX-wr.left,y:e.clientY-wr.top};
+    els.deviceLayer.querySelectorAll('.port.snap').forEach(p=>p.classList.remove('snap'));
+    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.port');
+    if(target && target!==cableDrag.sourcePortEl && target.dataset.type===cableDrag.type && target.dataset.device!==cableDrag.sourceDevice){
+      const targetBusy = target.dataset.type==='ethernet' && isPortBusy(target.dataset.device,target.dataset.port);
+      if(!targetBusy) target.classList.add('snap');
+    }
+    renderConnections();
+    e.preventDefault();
+  }
+  function endCableDrag(e){
+    document.removeEventListener('pointermove', moveCableDrag);
+    if(!cableDrag) return;
+    els.deviceLayer.querySelectorAll('.port.snap').forEach(p=>p.classList.remove('snap'));
+    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.port');
+    if(target && target!==cableDrag.sourcePortEl && target.dataset.type===cableDrag.type && target.dataset.device!==cableDrag.sourceDevice){
+      const targetBusy = target.dataset.type==='ethernet' && isPortBusy(target.dataset.device,target.dataset.port);
+      if(!targetBusy){
+        addConnection(cableDrag.sourceDevice,cableDrag.sourcePort,target.dataset.device,target.dataset.port,cableDrag.type);
+      } else {
+        setFeedback('warn','無法接線','目標 Ethernet Port 已被使用。請選擇另一個 Port。');
+      }
+    } else {
+      setFeedback('warn','未建立連線','請把線拖到另一件設備的同類型 Port。Ethernet 只可接 Ethernet，Wi-Fi 只可接 Wi-Fi。');
+    }
+    cableDrag=null;
+    renderConnections();
+  }
+
+  function addConnection(aDevice,aPort,bDevice,bPort,type){
+    const duplicate=connections.some(c=>sameEndpoint(c,aDevice,aPort,bDevice,bPort));
+    if(duplicate){
+      setFeedback('warn','已存在相同連線','同一對 Port 不需要重複接線。'); return;
+    }
+    saveHistory();
+    connections.push({id:'c'+(connSeq++),aDevice,aPort,bDevice,bPort,type});
+    selectedConnectionId=null;
+    renderAll();
+    setFeedback('', '已建立連線', type==='wifi' ? '已建立 Wi-Fi 連線。完成整個網絡後按「檢查網絡」。' : '已接上 Ethernet 網絡線。完成整個網絡後按「檢查網絡」。');
+  }
+  function sameEndpoint(c,ad,ap,bd,bp){
+    return (c.aDevice===ad&&c.aPort===ap&&c.bDevice===bd&&c.bPort===bp)||(c.aDevice===bd&&c.aPort===bp&&c.bDevice===ad&&c.bPort===ap);
+  }
+
+  function renderConnections(){
+    const wr=els.workspace.getBoundingClientRect();
+    const viewBox=`0 0 ${Math.max(1,wr.width)} ${Math.max(1,wr.height)}`;
+    els.svg.setAttribute('viewBox',viewBox);
+    els.labelsSvg.setAttribute('viewBox',viewBox);
+    els.svg.innerHTML='';
+    els.labelsSvg.innerHTML='';
+    for(const c of connections){
+      const a=findPortEl(c.aDevice,c.aPort), b=findPortEl(c.bDevice,c.bPort);
+      if(!a||!b) continue;
+      const p1=portCenter(a), p2=portCenter(b);
+      const d=curvePath(p1,p2);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+      const hit=document.createElementNS('http://www.w3.org/2000/svg','path');
+      hit.setAttribute('d',d); hit.setAttribute('class','connHit'); hit.dataset.id=c.id;
+      hit.style.pointerEvents='stroke';
+      hit.addEventListener('pointerdown',(e)=>{e.stopPropagation();selectConnection(c.id);});
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',d); path.setAttribute('class','connPath '+(c.type==='wifi'?'wifi ':'')+(selectedConnectionId===c.id?'selected':''));
+      const dot1=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot1.setAttribute('cx',p1.x); dot1.setAttribute('cy',p1.y); dot1.setAttribute('r','5.5'); dot1.setAttribute('class','connEndpoint '+(c.type==='wifi'?'wifi':''));
+      const dot2=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot2.setAttribute('cx',p2.x); dot2.setAttribute('cy',p2.y); dot2.setAttribute('r','5.5'); dot2.setAttribute('class','connEndpoint '+(c.type==='wifi'?'wifi':''));
+      g.append(hit,path,dot1,dot2);
+      els.svg.appendChild(g);
+
+      const sourceLabel = portDisplayLabel(c.aDevice,c.aPort);
+      const targetLabel = portDisplayLabel(c.bDevice,c.bPort);
+      const sourceRect = deviceRectInWorkspace(a.closest('.device'));
+      const targetRect = deviceRectInWorkspace(b.closest('.device'));
+      const lp1 = labelAnchorAtLineEnd(p1, p2, sourceRect, true, 12);
+      const lp2 = labelAnchorAtLineEnd(p1, p2, targetRect, false, 12);
+      els.labelsSvg.appendChild(makeConnLabel(lp1.x, lp1.y, sourceLabel));
+      els.labelsSvg.appendChild(makeConnLabel(lp2.x, lp2.y, targetLabel));
+    }
+    if(cableDrag){
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',curvePath(cableDrag.start,cableDrag.current));
+      path.setAttribute('class','tempPath');
+      els.svg.appendChild(path);
+    }
+  }
+  function selectConnection(id){
+    selectedConnectionId=id;
+    renderConnections();
+    const c=connections.find(x=>x.id===id);
+    els.del.disabled=!c;
+    els.selectedLabel.textContent=c?`${friendlyDevice(c.aDevice)} ↔ ${friendlyDevice(c.bDevice)}`:'未選取連線';
+  }
+  function friendlyDevice(id){
+    const d=placed[id]; if(!d) return id;
+    return d.label||DEVICE_TYPES[d.type].zh;
+  }
+
+  function portCenter(port){
+    const pr=port.getBoundingClientRect(), wr=els.workspace.getBoundingClientRect();
+    return {x:pr.left-wr.left+pr.width/2,y:pr.top-wr.top+pr.height/2};
+  }
+  function curvePath(p1,p2){
+    const dx=p2.x-p1.x, bend=Math.max(55,Math.abs(dx)*.45);
+    const c1x=p1.x+(dx>=0?bend:-bend), c2x=p2.x-(dx>=0?bend:-bend);
+    return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1x.toFixed(1)} ${p1.y.toFixed(1)}, ${c2x.toFixed(1)} ${p2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  function bezierControlPoints(p1,p2){
+    const dx=p2.x-p1.x;
+    const bend=Math.max(55,Math.abs(dx)*.45);
+    return {
+      c1:{x:p1.x+(dx>=0?bend:-bend), y:p1.y},
+      c2:{x:p2.x-(dx>=0?bend:-bend), y:p2.y}
+    };
+  }
+  function bezierPoint(p1,c1,c2,p2,t){
+    const mt=1-t;
+    const x = mt*mt*mt*p1.x + 3*mt*mt*t*c1.x + 3*mt*t*t*c2.x + t*t*t*p2.x;
+    const y = mt*mt*mt*p1.y + 3*mt*mt*t*c1.y + 3*mt*t*t*c2.y + t*t*t*p2.y;
+    return {x,y};
+  }
+  function bezierTangent(p1,c1,c2,p2,t){
+    const mt=1-t;
+    const x = 3*mt*mt*(c1.x-p1.x) + 6*mt*t*(c2.x-c1.x) + 3*t*t*(p2.x-c2.x);
+    const y = 3*mt*mt*(c1.y-p1.y) + 6*mt*t*(c2.y-c1.y) + 3*t*t*(p2.y-c2.y);
+    return {x,y};
+  }
+  function deviceRectInWorkspace(deviceEl){
+    const wr = els.workspace.getBoundingClientRect();
+    const r = deviceEl.getBoundingClientRect();
+    return {
+      left:r.left-wr.left,
+      top:r.top-wr.top,
+      right:r.right-wr.left,
+      bottom:r.bottom-wr.top
+    };
+  }
+  function pointInExpandedRect(pt, rect, pad=10){
+    return pt.x >= rect.left-pad && pt.x <= rect.right+pad && pt.y >= rect.top-pad && pt.y <= rect.bottom+pad;
+  }
+  function labelAnchorAtLineEnd(p1,p2,deviceRect,isStartEnd,offset){
+    const wr = els.workspace.getBoundingClientRect();
+    const {c1,c2}=bezierControlPoints(p1,p2);
+    let t = isStartEnd ? 0.02 : 0.98;
+    const step = isStartEnd ? 0.02 : -0.02;
+    let pt = isStartEnd ? p1 : p2;
+    for(let i=0;i<30;i++){
+      const probe = bezierPoint(p1,c1,c2,p2,t);
+      if(!pointInExpandedRect(probe, deviceRect, 10)){
+        pt = probe;
+        break;
+      }
+      t += step;
+      pt = probe;
+    }
+    const tan = bezierTangent(p1,c1,c2,p2,t);
+    const len = Math.hypot(tan.x,tan.y)||1;
+    let nx = -tan.y/len, ny = tan.x/len;
+    // Prefer moving labels upward when possible so they float beside the line
+    if(ny>0){ nx*=-1; ny*=-1; }
+    const x = Math.max(30, Math.min(wr.width-30, pt.x + nx*offset));
+    const y = Math.max(14, Math.min(wr.height-14, pt.y + ny*offset));
+    return {x,y};
+  }
+  function portDisplayLabel(deviceId,portId){
+    const d=placed[deviceId] || currentLevel().tray.find(x=>x.id===deviceId);
+    if(!d) return portId;
+    const def=DEVICE_TYPES[d.type];
+    return def.ports.find(p=>p.id===portId)?.label || portId;
+  }
+  function makeConnLabel(x,y,text){
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x); t.setAttribute('y',y); t.setAttribute('class','connLabelText');
+    t.textContent=text;
+    g.appendChild(t);
+    const approxWidth=Math.max(34, text.length * 7.6 + 14);
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', (x - approxWidth/2).toFixed(1));
+    rect.setAttribute('y', (y - 10).toFixed(1));
+    rect.setAttribute('rx', '9');
+    rect.setAttribute('ry', '9');
+    rect.setAttribute('width', approxWidth.toFixed(1));
+    rect.setAttribute('height', '20');
+    rect.setAttribute('class', 'connLabelBg');
+    g.insertBefore(rect,t);
+    return g;
+  }
+  function findPortEl(deviceId,portId){ return els.deviceLayer.querySelector(`.port[data-device="${CSS.escape(deviceId)}"][data-port="${CSS.escape(portId)}"]`); }
+  function isPortBusy(deviceId,portId){ return connections.some(c=>(c.aDevice===deviceId&&c.aPort===portId)||(c.bDevice===deviceId&&c.bPort===portId)); }
+  function usedEthernetCount(deviceId){
+    return connections.filter(c=>c.type==='ethernet'&&(c.aDevice===deviceId||c.bDevice===deviceId)).length;
+  }
+  function findConnectionByPort(deviceId,portId){
+    return connections.find(c=>(c.aDevice===deviceId&&c.aPort===portId)||(c.bDevice===deviceId&&c.bPort===portId)) || null;
+  }
+
+  function portRole(deviceId,portId){
+    const d=placed[deviceId] || currentLevel().tray.find(x=>x.id===deviceId);
+    if(!d) return null;
+    const def=DEVICE_TYPES[d.type];
+    return def.ports.find(p=>p.id===portId)?.role || null;
+  }
+
+  function matchesReq(c,r){
+    if(c.type!==r.type) return false;
+    const ar=portRole(c.aDevice,c.aPort), br=portRole(c.bDevice,c.bPort);
+    const direct=c.aDevice===r.a&&c.bDevice===r.b&&ar===r.aRole&&br===r.bRole;
+    const reverse=c.aDevice===r.b&&c.bDevice===r.a&&ar===r.bRole&&br===r.aRole;
+    return direct||reverse;
+  }
+
+  function validate(){
+    const level=currentLevel();
+    const topologies = level.validTopologies?.length ? level.validTopologies : [level.required];
+    const results = topologies.map(reqs=>{
+      const missing=reqs.filter(r=>!connections.some(c=>matchesReq(c,r)));
+      const wrong=connections.filter(c=>!reqs.some(r=>matchesReq(c,r)));
+      const unplacedRequired = new Set(reqs.flatMap(r=>[r.a,r.b]));
+      const missingDevices=[...unplacedRequired].filter(id=>!placed[id]);
+      return {
+        ok:missing.length===0&&wrong.length===0&&missingDevices.length===0,
+        missing,wrong,missingDevices,reqs,
+        score:missing.length+wrong.length+missingDevices.length
+      };
+    });
+    const exact=results.find(r=>r.ok);
+    if(exact) return exact;
+    results.sort((a,b)=>a.score-b.score || a.wrong.length-b.wrong.length || a.missing.length-b.missing.length);
+    return results[0];
+  }
+
+  function checkNetwork(){
+    if(Object.keys(placed).length===0){
+      setFeedback('warn','還未開始','先把器材拖入工作區，再建立連線。'); return;
+    }
+    const result=validate();
+    if(result.ok){
+      animateFlow();
+      const level=currentLevel();
+      let actions='';
+      if(currentLevelIndex<LEVELS.length-1){
+        actions='<div class="resultActions"><button type="button" class="btn success" id="nextLevelBtn">下一關 →</button></div>';
+      }else{
+        actions='<div class="resultActions"><button type="button" class="btn success" id="restartCourseBtn">重新挑戰全部任務</button></div>';
+      }
+      let concepts='';
+      if(currentLevelIndex===1) concepts='<br><strong>記住：</strong> Router 連接不同網絡；Switch 連接多部有線設備；Wireless AP 讓無線設備加入 LAN。';
+      if(currentLevelIndex===2) concepts='<br><strong>關鍵概念：</strong> Router LAN Port 不足時，可以加入 Switch 擴充有線連接。';
+      setFeedback('ok','✓ 正確！',escapeHtml(level.success)+concepts,actions);
+      document.getElementById('nextLevelBtn')?.addEventListener('click',nextLevel);
+      document.getElementById('restartCourseBtn')?.addEventListener('click',()=>loadLevel(0));
+    }else{
+      let parts=[];
+      if(result.missingDevices.length){ parts.push(`還有 ${result.missingDevices.length} 件必要器材未放入工作區。`); }
+      if(result.missing.length){ parts.push(`還欠 ${result.missing.length} 條必要連線。`); }
+      if(result.wrong.length){
+        parts.push(`有 ${result.wrong.length} 條連線需要重新思考。`);
+        parts.push(explainWrong(result.wrong[0]));
+        selectedConnectionId=result.wrong[0].id;
+        renderConnections(); updateButtons();
+      }
+      setFeedback('err','再檢查一下',parts.map(escapeHtml).join('<br>'));
+    }
+  }
+
+  function explainWrong(c){
+    const da=placed[c.aDevice], db=placed[c.bDevice];
+    const ta=da?.type, tb=db?.type;
+    const ra=portRole(c.aDevice,c.aPort), rb=portRole(c.bDevice,c.bPort);
+    const pair=new Set([ta,tb]);
+    if(pair.has('desktop')&&pair.has('broadband')) return '桌上電腦一般不會直接接 Broadband；先想想哪件設備負責把 LAN 連到互聯網。';
+    if(pair.has('ap')&&pair.has('broadband')) return 'Wireless Access Point 應先接入 LAN，而不是直接接 Broadband。';
+    if((pair.has('switch')&&pair.has('router'))||(pair.has('switch')&&pair.has('homeRouter'))){
+      if(ra==='wan'||rb==='wan') return 'Switch 應接 Router 的 LAN Port，不是 WAN Port。';
+    }
+    if((pair.has('broadband')&&pair.has('router'))||(pair.has('broadband')&&pair.has('homeRouter'))){
+      if(ra==='lan'||rb==='lan') return 'Broadband 應接 Router 的 WAN Port。';
+    }
+    if(currentLevelIndex===2 && (ta==='router'||tb==='router')) return '這一關要解決的是 LAN Port 不足，重點不是再加入另一個 Router。';
+    if(currentLevelIndex===2 && pair.has('ap')) return 'Wireless AP 主要提供無線接達；要增加多部桌上電腦的有線連接，應考慮 Switch。';
+    if(currentLevelIndex===1 && pair.has('router') && pair.has('ap')) return '本題的 Router 只有 WAN 和 LAN 兩個 Port：WAN 已接 Broadband，LAN 應接 Switch。Wireless AP 應接到 Switch。';
+    return '這條連線不屬於本題需要的拓撲。想一想每件設備的角色，以及資料應該經哪條路徑到 Internet。';
+  }
+
+  function animateFlow(){
+    els.svg.querySelectorAll('.connPath').forEach(p=>p.classList.add('flowing'));
+    setTimeout(()=>els.svg.querySelectorAll('.connPath').forEach(p=>p.classList.remove('flowing')),1900);
+  }
+
+  function showHint(){
+    const h=currentLevel().hints[Math.min(hintIndex,currentLevel().hints.length-1)];
+    hintIndex=Math.min(hintIndex+1,currentLevel().hints.length-1);
+    setFeedback('warn',`提示 ${Math.min(hintIndex,currentLevel().hints.length)} / ${currentLevel().hints.length}`,escapeHtml(h));
+  }
+
+  function arrange(){
+    if(!Object.keys(placed).length) return;
+    saveHistory();
+    const wr=els.workspace.getBoundingClientRect();
+    const ids=Object.keys(placed);
+    const groups={broadband:[],router:[],middle:[],clients:[]};
+    ids.forEach(id=>{
+      const t=placed[id].type;
+      if(t==='broadband') groups.broadband.push(id);
+      else if(t==='router'||t==='homeRouter') groups.router.push(id);
+      else if(t==='switch'||t==='ap') groups.middle.push(id);
+      else groups.clients.push(id);
+    });
+    const rows=[groups.broadband,groups.router,groups.middle,groups.clients];
+    const ys=[28,170,315,465];
+    rows.forEach((arr,row)=>{
+      if(!arr.length) return;
+      const gap=Math.max(150,Math.min(205,(wr.width-40)/Math.max(1,arr.length)));
+      const total=(arr.length-1)*gap+166;
+      let start=Math.max(10,(wr.width-total)/2);
+      arr.forEach((id,i)=>{ placed[id].x=clamp(start+i*gap,8,Math.max(8,wr.width-176)); placed[id].y=clamp(ys[row],8,Math.max(8,wr.height-125)); });
+    });
+    renderAll();
+  }
+
+
+  function removeDevice(id){
+    if(!placed[id]) return;
+    saveHistory();
+    delete placed[id];
+    connections = connections.filter(c=>c.aDevice!==id && c.bDevice!==id);
+    selectedConnectionId=null;
+    renderAll();
+    setFeedback('', '已移除器材', '與這件器材相連的連線亦已一併移除。');
+  }
+
+  function deleteConnectionById(id,fromPortTap=false){
+    const idx=connections.findIndex(c=>c.id===id);
+    if(idx<0) return;
+    saveHistory();
+    connections.splice(idx,1);
+    selectedConnectionId=null;
+    renderAll();
+    setFeedback('', '已刪除連線', fromPortTap ? '已取消這條連線。你可以重新由 Port 拖拉建立正確連線。' : '你可以重新由 Port 拖拉建立正確連線。');
+  }
+  function deleteSelectedConnection(){
+    if(!selectedConnectionId) return;
+    deleteConnectionById(selectedConnectionId,false);
+  }
+
+  function resetLevel(){
+    if(!Object.keys(placed).length && !connections.length) return;
+    saveHistory();
+    placed={}; connections=[]; selectedConnectionId=null; hintIndex=0;
+    renderAll();
+    setFeedback('', '已重新開始', '把需要的器材重新拖入工作區。');
+  }
+
+  function undo(){
+    const snap=history.pop();
+    if(!snap) return;
+    restoreSnapshot(snap);
+    setFeedback('', '已復原', '已返回上一個狀態。');
+  }
+
+  function nextLevel(){ loadLevel(currentLevelIndex+1); }
+  function loadLevel(index){
+    currentLevelIndex=clamp(index,0,LEVELS.length-1);
+    placed={}; connections=[]; history=[]; selectedConnectionId=null; hintIndex=0; connSeq=1;
+    renderAll();
+    setFeedback('', '新任務開始', '把需要的器材拖入工作區，然後由 Port 拖拉接線。若接錯了，可點一下已連接的 Port 選取／取消連線。');
+  }
+
+  function updateStatus(){
+    const d=Object.keys(placed).length,c=connections.length;
+    els.status.textContent=`${d} 件器材｜${c} 條連線`;
+  }
+  function updateButtons(){
+    els.undo.disabled=history.length===0;
+    els.del.disabled=!selectedConnectionId;
+    if(selectedConnectionId){
+      const c=connections.find(x=>x.id===selectedConnectionId);
+      els.selectedLabel.textContent=c?`${friendlyDevice(c.aDevice)} ↔ ${friendlyDevice(c.bDevice)}`:'未選取連線';
+    } else els.selectedLabel.textContent='未選取連線';
+  }
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+  els.undo.addEventListener('click',undo);
+  els.arrange.addEventListener('click',arrange);
+  els.hint.addEventListener('click',showHint);
+  els.del.addEventListener('click',deleteSelectedConnection);
+  els.reset.addEventListener('click',resetLevel);
+  els.check.addEventListener('click',checkNetwork);
+  els.workspace.addEventListener('pointerdown',e=>{
+    if(e.target===els.workspace||e.target===els.deviceLayer){ selectedConnectionId=null; renderConnections(); updateButtons(); }
+  });
+  window.addEventListener('resize',()=>{ clampAllDevices(); renderAll(); });
+
+  function clampAllDevices(){
+    const wr=els.workspace.getBoundingClientRect();
+    Object.values(placed).forEach(d=>{
+      d.x=clamp(d.x,6,Math.max(6,wr.width-176));
+      d.y=clamp(d.y,6,Math.max(6,wr.height-125));
+    });
+  }
+
+  loadLevel(0);
+})();
+</script>
+</body>
+</html>
